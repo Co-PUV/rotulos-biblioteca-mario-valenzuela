@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#003366">
+<meta name="description" content="Generador de rótulos para la Biblioteca de Filosofía y Teología Mario Valenzuela, S.J.">
+<title>Impresión de Rótulos Biblioteca Mario Valenzuela</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+</head>
+
+<body>
+<header>
+ <h1>Impresión de Rótulos Biblioteca Mario Valenzuela</h1>
+ <p>Generación de rótulos a partir de archivos bibliográficos</p>
+</header>
+
+<main><div class="workspace">
+
+<div class="tabs" role="tablist">
+ <button class="tab active" id="tab-nuevos" type="button">📂 NUEVOS</button>
+ <button class="tab" id="tab-inventario" type="button">💻 INVENTARIO</button>
+</div>
+
+<!-- MÓDULO NUEVOS -->
+<section class="panel active" id="panel-nuevos">
+ <div class="context-banner">CARGA DE NUEVOS</div>
+
+ <div class="section">
+  <h2><span class="number">1</span>Seleccionar archivo</h2>
+  <div class="filebox">
+   <label>Archivo de Nuevos</label>
+   <input type="file" id="file-nuevos" accept=".xlsx,.xls,.csv,text/csv">
+  </div>
+  <div class="progress" id="progress-nuevos"><span></span></div>
+  <div class="status" id="status-nuevos"></div>
+ </div>
+
+ <div class="section">
+  <h2><span class="number">2</span>Lectura de código de barras</h2>
+  <div class="row">
+   <input id="scan-nuevos" placeholder="Escanee o escriba el código de barras" autocomplete="off">
+   <button type="button" id="search-nuevos">Buscar código</button>
+  </div>
+  <div id="result-nuevos"></div>
+ </div>
+
+ <div class="section">
+  <h2><span class="number">3</span>Rótulos para imprimir</h2>
+  <div class="summary">Rótulos seleccionados: <span id="count-nuevos">0</span></div>
+  <div class="labels" id="labels-nuevos"><div class="empty">Aún no hay rótulos seleccionados.</div></div>
+  <div class="actions">
+   <button type="button" class="word" id="word-nuevos">📄 Generar documento Word</button>
+   <button type="button" class="secondary" id="clear-nuevos">Limpiar rótulos</button>
+  </div>
+  <table><thead><tr><th>#</th><th>Código</th><th>Clasificación</th><th></th></tr></thead><tbody id="table-nuevos"></tbody></table>
+ </div>
+</section>
+
+<!-- MÓDULO INVENTARIO -->
+<section class="panel" id="panel-inventario">
+ <div class="context-banner">CARGA DE INVENTARIO</div>
+
+ <div class="section">
+  <h2><span class="number">1</span>Seleccionar archivo</h2>
+  <div class="filebox">
+   <label>Archivo de Inventario</label>
+   <input type="file" id="file-inventario" accept=".xlsx,.xls,.csv,text/csv">
+  </div>
+  <div class="progress" id="progress-inventario"><span></span></div>
+  <div class="status" id="status-inventario"></div>
+ </div>
+
+ <div class="section">
+  <h2><span class="number">2</span>Lectura de código de barras</h2>
+  <div class="row">
+   <input id="scan-inventario" placeholder="Escanee o escriba el código de barras" autocomplete="off">
+   <button type="button" id="search-inventario">Buscar código</button>
+  </div>
+  <div id="result-inventario"></div>
+ </div>
+
+ <div class="section">
+  <h2><span class="number">3</span>Rótulos para imprimir</h2>
+  <div class="summary">Rótulos seleccionados: <span id="count-inventario">0</span></div>
+  <div class="labels" id="labels-inventario"><div class="empty">Aún no hay rótulos seleccionados.</div></div>
+  <div class="actions">
+   <button type="button" class="word" id="word-inventario">📄 Generar documento Word</button>
+   <button type="button" class="secondary" id="clear-inventario">Limpiar rótulos</button>
+  </div>
+  <table><thead><tr><th>#</th><th>Código</th><th>Clasificación</th><th></th></tr></thead><tbody id="table-inventario"></tbody></table>
+ </div>
+</section>
+
+</div></main>
+
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.iife.js"></script>
+<script src="app.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('service-worker.js'));
+}
+</script>
+</body>
+</html>

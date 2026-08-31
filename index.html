@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Rótulos Biblioteca Mario Valenzuela — Original de Rótulos</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.iife.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <style>
 :root{--azul:#003366;--azul2:#0B4F6C;--amarillo:#F4C400;--fondo:#F4F6F8;--texto:#263746;--borde:#D8E1E8;--verde:#287D4A;--rojo:#B63342}
 *{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#EEF2F5,#F7F9FA 380px);font-family:"Segoe UI",Arial,sans-serif;color:var(--texto)}
@@ -19,11 +19,58 @@ main{max-width:1180px;margin:30px auto;padding:0 18px}.workspace{background:#fff
 input[type=file],input[type=text]{width:100%;padding:13px;border:1px solid #C9D7E0;border-radius:9px;font-size:15px}button{font:inherit;font-weight:750;border:0;border-radius:9px;padding:12px 19px;cursor:pointer;background:var(--azul);color:#fff}button.secondary{background:#F1F4F6;color:var(--azul);border:1px solid #D6E0E6}button.word{background:linear-gradient(135deg,#F4C400,#E6B700);color:#25323C}
 .row{display:flex;gap:10px}.row input{flex:1}.status{display:none;margin-top:14px;padding:12px 14px;border-radius:9px;border-left:4px solid var(--azul);background:#EDF3F7}.status.show{display:block}.status.ok{background:#EEF8F1;border-left-color:var(--verde)}.status.error{background:#FDF0F1;border-left-color:var(--rojo)}.status.warn{background:#FFF8E4;border-left-color:#D7A700}
 .progress{display:none;height:6px;background:#E5EBEF;margin-top:14px;overflow:hidden}.progress span{display:block;width:0;height:100%;background:linear-gradient(90deg,var(--azul2),var(--amarillo))}
+.inv-loader{margin-top:14px;padding:15px 18px;border:1px solid #D9E5DF;border-radius:14px;background:linear-gradient(180deg,#FCFDFC,#F2F7F4)}
+.inv-loader-top{display:flex;justify-content:space-between;align-items:center;gap:16px}.inv-loader-title{font-weight:800;color:#173F2D;font-size:17px}.inv-loader-text{margin-top:4px;color:#667A72;font-size:13px}.inv-percent{font-size:27px;font-weight:850;color:#075D3B;min-width:58px;text-align:right}
+.inv-progress{height:8px;background:#DCE8E1;border-radius:999px;overflow:hidden;margin-top:12px}.inv-progress span{display:block;height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,var(--azul2),#0C8B61,#5BC48A);transition:width .22s ease}
+.inv-scene{position:relative;height:130px;margin-top:12px;border-radius:11px;overflow:hidden;background:linear-gradient(180deg,#FAFCFB 0%,#F0F5F2 78%,#E2EBE5 78%,#E2EBE5 80%,#F0F5F2 80%);cursor:pointer}
+.inv-scene:before{content:"";position:absolute;left:4%;right:4%;bottom:25px;height:1px;background:#B7C8BF}
+.inv-shelf{position:absolute;right:7%;bottom:25px;width:125px;height:72px;border:4px solid #91A79C;border-bottom-width:5px;border-radius:2px;opacity:.55}.inv-shelf:before{content:"";position:absolute;left:0;right:0;top:50%;height:4px;background:#91A79C}.inv-shelf-books{position:absolute;left:9px;bottom:9px;font-size:15px;letter-spacing:4px}
+.inv-librarian{position:absolute;left:calc(3% + (var(--inv-progress,0) * .68%));bottom:24px;width:76px;height:100px;transition:left .25s ease-out;filter:drop-shadow(0 4px 4px rgba(20,55,40,.09))}
+.inv-librarian svg{width:100%;height:100%}.inv-librarian>svg>g{transform-origin:50% 100%;animation:invWalk .7s ease-in-out infinite alternate}.inv-arm{transform-origin:50% 20%;animation:invArm .52s ease-in-out infinite alternate}.inv-books{transform-origin:50% 50%;animation:invBooks .45s ease-in-out infinite alternate}
+.inv-scene.done .inv-librarian>svg>g,.inv-scene.done .inv-arm,.inv-scene.done .inv-books{animation:none}
+@keyframes invWalk{from{transform:translateY(1px) rotate(-1deg)}to{transform:translateY(-1px) rotate(1deg)}}@keyframes invArm{from{transform:rotate(-2deg)}to{transform:rotate(3deg)}}@keyframes invBooks{from{transform:translateY(1px)}to{transform:translateY(-1px)}}
 .summary{margin:3px 0 17px;font-weight:750;color:var(--azul);padding:10px 13px;background:#F4F7F9;border-left:3px solid var(--amarillo)}
 .labels{display:grid;grid-template-columns:repeat(6,1fr);gap:9px}.label{min-height:74px;border:1px dashed #9FAFBA;border-radius:5px;padding:8px;display:flex;justify-content:center;align-items:center;text-align:center;font-weight:800}.empty{grid-column:1/-1;padding:16px;color:#758592;background:#F7F9FA;border-radius:8px}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:19px}
 table{width:100%;border-collapse:collapse;margin-top:20px;font-size:13px}th,td{padding:10px;border-bottom:1px solid #E6ECEF;text-align:left}th{background:#F2F6F8;color:var(--azul)}
 @media(max-width:720px){.tabs,.row{flex-direction:column}.labels{grid-template-columns:repeat(3,1fr)}}
 </style>
+
+<script>
+/* Cargador robusto de DOCX para el paso 4.
+   Intenta dos CDN; no interviene en la lectura del Excel. */
+window.loadDocxLibrary = function(){
+  if(window.docx && window.docx.Document && window.docx.Packer){
+    return Promise.resolve(window.docx);
+  }
+  if(window.__docxPromise) return window.__docxPromise;
+
+  const urls=[
+    'https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.iife.js',
+    'https://unpkg.com/docx@8.5.0/build/index.iife.js'
+  ];
+
+  window.__docxPromise = new Promise((resolve,reject)=>{
+    let i=0;
+    const next=()=>{
+      if(i>=urls.length){
+        reject(new Error('No se pudo cargar el generador DOCX. Compruebe la conexión a Internet y vuelva a intentar.'));
+        return;
+      }
+      const s=document.createElement('script');
+      s.src=urls[i++];
+      s.onload=()=>{
+        if(window.docx && window.docx.Document && window.docx.Packer) resolve(window.docx);
+        else next();
+      };
+      s.onerror=next;
+      document.head.appendChild(s);
+    };
+    next();
+  });
+  return window.__docxPromise;
+};
+</script>
+
 </head>
 <body>
 <header><h1>Rótulos Biblioteca de Filosofía y Teología Mario Valenzuela, S.J.</h1><p>Generación de rótulos a partir de archivos bibliográficos</p></header>
@@ -39,7 +86,51 @@ table{width:100%;border-collapse:collapse;margin-top:20px;font-size:13px}th,td{p
 
 <section class="panel" id="panel-inventario">
 <div class="banner">CARGA DE INVENTARIO</div>
-<div class="section"><h2><span class="n">1</span>Seleccionar archivo</h2><div class="filebox"><label>Archivo de Inventario</label><input type="file" id="file-inventario" accept=".xlsx,.xls,.csv"></div><div class="progress" id="progress-inventario"><span></span></div><div class="status" id="status-inventario"></div></div>
+<div class="section"><h2><span class="n">1</span>Seleccionar archivo</h2>
+<div class="filebox"><label>Archivo de Inventario</label>
+<input type="file" id="file-inventario" accept=".xlsx,.xls,.xlsm,.csv">
+</div>
+<div class="inv-loader" id="inv-loader" style="display:none">
+  <div class="inv-loader-top">
+    <div>
+      <div class="inv-loader-title">Procesando inventario</div>
+      <div class="inv-loader-text" id="inv-loader-text">Preparando el archivo…</div>
+    </div>
+    <div class="inv-percent" id="inv-percent">0%</div>
+  </div>
+  <div class="inv-progress"><span id="inv-progress-bar"></span></div>
+  <div class="inv-scene" id="inv-scene">
+    <div class="inv-shelf"><div class="inv-shelf-books">▥ ▤ ▥ ▤ ▥ ▤ ▥</div></div>
+    <div class="inv-librarian" id="inv-librarian" aria-label="Bibliotecólogo">
+      <svg viewBox="0 0 92 120">
+        <g>
+          <circle cx="44" cy="18" r="11" fill="#d6aa82"/>
+          <path d="M33 18c1-13 20-17 25-4-5-5-17-4-25 4Z" fill="#3e4a46"/>
+          <circle cx="40" cy="18" r="4" fill="none" stroke="#344d45" stroke-width="1.7"/>
+          <circle cx="49" cy="18" r="4" fill="none" stroke="#344d45" stroke-width="1.7"/>
+          <path d="M44 18h1.5" stroke="#344d45" stroke-width="1.7"/>
+          <path d="M34 31c6-5 17-5 23 0l6 35H30Z" fill="#245c47"/>
+          <path d="M43 31l4 6 4-6" fill="#f3f6f4"/>
+          <rect x="51" y="43" width="10" height="14" rx="1.5" fill="#f8faf8" stroke="#668177"/>
+          <circle cx="56" cy="47" r="1.5" fill="#7da28f"/>
+          <path d="M53 51h6M53 53h6" stroke="#7da28f" stroke-width=".8"/>
+          <path d="M39 65l-7 31M55 65l11 30" stroke="#5d4d3e" stroke-width="6" stroke-linecap="round"/>
+          <path d="M32 96l-7 4M66 95l7 3" stroke="#35473f" stroke-width="5" stroke-linecap="round"/>
+          <g class="inv-arm">
+            <path d="M35 37L20 57M57 37l15 20" stroke="#d6aa82" stroke-width="5.5" stroke-linecap="round"/>
+          </g>
+          <g class="inv-books">
+            <rect x="17" y="52" width="52" height="7" rx="1" fill="#577d6d"/>
+            <rect x="14" y="59" width="57" height="7" rx="1" fill="#8ba99b"/>
+            <rect x="18" y="66" width="54" height="7" rx="1" fill="#4d705f"/>
+          </g>
+        </g>
+      </svg>
+    </div>
+  </div>
+</div>
+<div class="progress" id="progress-inventario"><span></span></div>
+<div class="status" id="status-inventario"></div></div>
 <div class="section"><h2><span class="n">2</span>Lectura de código de barras</h2><div class="row"><input id="scan-inventario" placeholder="Escanee o escriba el código de barras" autocomplete="off"><button id="search-inventario">Buscar código</button></div><div id="result-inventario"></div></div>
 <div class="section"><h2><span class="n">3</span>Rótulos para imprimir</h2><div class="summary">Rótulos seleccionados: <span id="count-inventario">0</span></div><div class="labels" id="labels-inventario"><div class="empty">Aún no hay rótulos seleccionados.</div></div><div class="actions"><button class="word" id="word-inventario">📄 Generar documento Word</button><button class="secondary" id="clear-inventario">Limpiar rótulos</button></div><table><thead><tr><th>#</th><th>Código</th><th>Clasificación</th><th></th></tr></thead><tbody id="table-inventario"></tbody></table></div>
 </section>
@@ -48,12 +139,22 @@ table{width:100%;border-collapse:collapse;margin-top:20px;font-size:13px}th,td{p
 <script>
 const normalize = v => String(v ?? '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
 function digits(v){
-  let s=String(v ?? '').trim().replace(/\u00A0/g,' ');
+  if(v===null || v===undefined || v==='') return '';
+  let s=String(v).trim().replace(/\u00A0/g,' ');
   if(!s) return '';
+
+  // Excel puede entregar un código largo como número, texto o notación científica.
+  // Siempre se transforma a una clave numérica comparable, sin alterar la
+  // clasificación de la fila.
   if(/[eE][+\-]?\d+$/.test(s)){
     const n=Number(s.replace(/,/g,'.'));
-    if(Number.isFinite(n)) s=String(Math.trunc(n));
+    if(Number.isFinite(n)){
+      s=Number.isInteger(n) ? String(n) : String(Math.trunc(n));
+    }
   }
+
+  // Elimina espacios/separadores habituales de lectores de códigos.
+  s=s.replace(/[\s\-_.\/]/g,'');
   return s.replace(/[^\d]/g,'');
 }
 const codePatterns=['codigodebarras','codigobarras','codigodebarra','codigobarra','barcode','barcodes','itembarcode','itembarcodes','codigoean','ean','isbn'];
@@ -61,7 +162,15 @@ const classPatterns=['clasificacion','clasificaicon','clasificacio','clasif','si
 function isCodeHeader(v){const x=normalize(v);return !!x&&codePatterns.some(k=>x===k||x.includes(k))}
 function isClassHeader(v){const x=normalize(v);return !!x&&classPatterns.some(k=>x===k||x.includes(k))}
 function cellObj(ws,r,c){return ws[XLSX.utils.encode_cell({r,c})]||null}
-function cell(ws,r,c){const z=cellObj(ws,r,c);return z?String(z.w??z.v??'').trim():''}
+function cell(ws,r,c){
+  const z=cellObj(ws,r,c);
+  if(!z)return '';
+  // Prefer the underlying value. For text this preserves the barcode exactly;
+  // for numeric Excel cells it avoids display formatting such as commas.
+  if(z.v!==undefined&&z.v!==null)return String(z.v).trim();
+  if(z.w!==undefined&&z.w!==null)return String(z.w).trim();
+  return '';
+}
 
 function findPairAdaptive(ws){
   if(!ws||!ws['!ref'])return null;
@@ -111,23 +220,178 @@ function extract(ws,pair,sheet){
   const out=[];
   for(let r=pair.headerRow+1;r<=pair.lastRow;r++){
     const rawCode=cell(ws,r,pair.codeCol),code=digits(rawCode),classification=cell(ws,r,pair.classCol).trim();
-    if(code.length>=8&&code.length<=20&&classification)out.push({key:code,code:rawCode,classification,sheet,row:r+1});
+    if(code.length>=3&&code.length<=30&&classification)out.push({key:code,code:rawCode,classification,sheet,row:r+1});
   }
   return out;
 }
-function processWorkbook(buffer){
-  const wb=XLSX.read(buffer,{type:'array',raw:false,cellText:true,cellDates:false});
-  const records=[],matchedSheets=[];
-  for(const sheet of wb.SheetNames){
-    const pair=findPairWithInference(wb.Sheets[sheet]);
-    if(!pair)continue;
-    const rows=extract(wb.Sheets[sheet],pair,sheet);
-    if(rows.length){matchedSheets.push(sheet);records.push(...rows)}
-  }
-  if(!records.length)throw new Error('El Excel se abrió, pero no se encontraron filas con Código de barras y Clasificación. La aplicación busca ambos campos en todas las hojas y toma los datos de la misma fila.');
-  return{records,sheetsTotal:wb.SheetNames.length,matchedSheets};
+function normalizeHeader(v){
+  return String(v??'').trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[\s_\-./]+/g,'')
+    .replace(/[^a-z0-9]/g,'');
 }
 
+function normalizeCode(v){
+  if(v===null||v===undefined||v==='') return '';
+  let s=String(v).trim().replace(/\u00A0/g,'');
+  if(/[eE][+\-]?\d+$/.test(s)){
+    const n=Number(s.replace(',','.'));
+    if(Number.isFinite(n)) s=Number.isInteger(n)?String(n):String(Math.trunc(n));
+  }
+  return s.replace(/[^\d]/g,'');
+}
+
+function sheetCell(ws,r,c){
+  const z=ws[XLSX.utils.encode_cell({r,c})];
+  if(!z) return '';
+  if(z.w!==undefined && z.w!==null && String(z.w).trim()!=='') return String(z.w).trim();
+  if(z.v!==undefined && z.v!==null) return String(z.v).trim();
+  return '';
+}
+
+const CODE_HEADERS=[
+  'codigodebarras','codigobarras','codigodebarra','codigobarra',
+  'barcode','barcodes','itembarcode','itembarcodes'
+];
+const CLASS_HEADERS=[
+  'clasificacion','clasif','classification','signatura',
+  'signaturatopografica','callnumber','numerodeclasificacion',
+  'numeroclasificacion','dewey'
+];
+
+function isBarcodeHeader(v){
+  const x=normalizeHeader(v);
+  return CODE_HEADERS.some(k=>x===k);
+}
+function isClassificationHeader(v){
+  const x=normalizeHeader(v);
+  return CLASS_HEADERS.some(k=>x===k);
+}
+
+/* Busca las columnas por encabezado. No se inventan columnas. */
+function locateColumns(ws){
+  const code=[],classification=[];
+  for(const addr of Object.keys(ws)){
+    if(addr[0]==='!') continue;
+    const z=ws[addr];
+    const value=String(z.w??z.v??'').trim();
+    if(!value) continue;
+    const p=XLSX.utils.decode_cell(addr);
+    if(isBarcodeHeader(value)) code.push(p);
+    if(isClassificationHeader(value)) classification.push(p);
+  }
+  return {code,classification};
+}
+
+/* Determina pares de columnas en una misma tabla, favoreciendo encabezados
+   de la misma fila. */
+function exactPairs(ws){
+  const found=locateColumns(ws);
+  const pairs=[];
+  for(const b of found.code){
+    for(const c of found.classification){
+      if(b.r===c.r){
+        pairs.push({headerRow:b.r,codeCol:b.c,classCol:c.c,score:0});
+      }
+    }
+  }
+  if(!pairs.length){
+    for(const b of found.code){
+      for(const c of found.classification){
+        const distance=Math.abs(b.r-c.r);
+        if(distance<=2){
+          pairs.push({headerRow:Math.max(b.r,c.r),codeCol:b.c,classCol:c.c,score:distance});
+        }
+      }
+    }
+  }
+  pairs.sort((a,b)=>a.score-b.score);
+  return pairs;
+}
+
+function readExactSheet(ws,sheetName,onRows){
+  if(!ws||!ws['!ref']) return [];
+  const rg=XLSX.utils.decode_range(ws['!ref']);
+  const pairs=exactPairs(ws);
+  const records=[];
+
+  /* Solo se aceptan relaciones derivadas de columnas identificadas por sus
+     encabezados. La clasificación siempre se obtiene de la misma fila. */
+  const used=new Set();
+  for(const pair of pairs){
+    const signature=`${pair.headerRow}|${pair.codeCol}|${pair.classCol}`;
+    if(used.has(signature)) continue;
+    used.add(signature);
+
+    for(let r=pair.headerRow+1;r<=rg.e.r;r++){
+      const rawCode=sheetCell(ws,r,pair.codeCol);
+      const code=normalizeCode(rawCode);
+      if(!code) continue;
+
+      const classification=sheetCell(ws,r,pair.classCol);
+      records.push({
+        key:code,
+        code:rawCode,
+        classification:classification,
+        sheet:sheetName,
+        row:r+1,
+        codeColumn:XLSX.utils.encode_col(pair.codeCol),
+        classificationColumn:XLSX.utils.encode_col(pair.classCol)
+      });
+      if(onRows) onRows();
+    }
+  }
+  return records;
+}
+
+function processWorkbook(buffer,onProgress){
+  const wb=XLSX.read(buffer,{
+    type:'array',
+    raw:false,
+    cellText:true,
+    cellDates:false,
+    cellStyles:false,
+    cellNF:false
+  });
+  if(!wb||!wb.SheetNames||!wb.SheetNames.length)
+    throw new Error('El archivo no contiene hojas legibles.');
+
+  const records=[];
+  const matchedSheets=[];
+  const total=wb.SheetNames.length;
+
+  /* NUEVOS: EXCLUSIVAMENTE la hoja acordada. */
+  if(typeof currentInventoryMode!=='undefined' && currentInventoryMode==='nuevos'){
+    const target='NUEVOS - INVENTARIO 2026';
+    if(!wb.SheetNames.includes(target))
+      throw new Error(`No se encontró la hoja obligatoria "${target}".`);
+    const rows=readExactSheet(wb.Sheets[target],target);
+    records.push(...rows);
+    if(rows.length) matchedSheets.push(target);
+    if(onProgress) onProgress(100,`Hoja utilizada: ${target}`);
+    if(!rows.length)
+      throw new Error(`La hoja "${target}" no contiene una relación identificable entre Código de barras y Clasificación.`);
+    return {records,sheetsTotal:1,matchedSheets};
+  }
+
+  /* INVENTARIO: todas las hojas del libro. */
+  for(let i=0;i<total;i++){
+    const name=wb.SheetNames[i];
+    const rows=readExactSheet(wb.Sheets[name],name);
+    if(rows.length){
+      matchedSheets.push(name);
+      records.push(...rows);
+    }
+    if(onProgress)
+      onProgress(5+Math.round(((i+1)/total)*90),`Analizando hoja ${i+1} de ${total}: ${name}`);
+  }
+
+  if(!records.length)
+    throw new Error('Se revisaron todas las hojas, pero no se encontró una relación identificable entre Código de barras y Clasificación.');
+  return {records,sheetsTotal:total,matchedSheets};
+}
+
+let currentInventoryMode='inventario';
 const states={
   nuevos:{db:new Map(),labels:[],classificationConflicts:[]},
   inventario:{db:new Map(),labels:[],classificationConflicts:[]}
@@ -142,101 +406,286 @@ function render(mode){
 }
 async function load(mode,file){
   if(!file)return;
-  const p=$('progress-'+mode),bar=p.querySelector('span');p.style.display='block';bar.style.width='10%';setStatus(mode,'Abriendo y analizando todas las hojas del Excel…');
-  try{
-    const buffer=await file.arrayBuffer();bar.style.width='45%';const result=processWorkbook(buffer);bar.style.width='80%';
-    const db=new Map();
-    const conflicts=new Map();
-    let duplicates=0;
+  currentInventoryMode=mode;
 
-    /* Un mismo código puede aparecer varias veces. Solo es un conflicto
-       cuando el mismo código tiene DOS O MÁS clasificaciones DISTINTAS.
-       La clasificación se toma exclusivamente de la celda de clasificación
-       de la misma fila del código. */
+  const loader=$('inv-loader'),bar=$('inv-progress-bar'),pct=$('inv-percent'),
+        txt=$('inv-loader-text'),scene=$('inv-scene');
+
+  loader.style.display='block';
+
+  const progress=(n,msg)=>{
+    n=Math.max(0,Math.min(100,Math.round(n)));
+    bar.style.width=n+'%';
+    pct.textContent=n+'%';
+    txt.textContent=msg||'Procesando…';
+    scene.style.setProperty('--inv-progress',n);
+  };
+
+  try{
+    progress(3,'Preparando el archivo…');
+    const buffer=await file.arrayBuffer();
+    progress(8,`Archivo recibido: ${file.name}`);
+    await new Promise(requestAnimationFrame);
+
+    /* No hay límite artificial de tamaño. La aplicación procesa todas las
+       hojas que entregue el lector XLSX/CSV. */
+    const result=processWorkbook(buffer,progress);
+
+    progress(94,`Consolidando ${result.records.length.toLocaleString()} registros…`);
+    await new Promise(requestAnimationFrame);
+
+    const db=new Map(),conflicts=new Map();
+
     for(const rec of result.records){
       if(!db.has(rec.key)){
         db.set(rec.key,rec);
         conflicts.set(rec.key,new Map([[String(rec.classification).trim(),rec]]));
       }else{
-        duplicates++;
         const variants=conflicts.get(rec.key);
         const cls=String(rec.classification).trim();
-        if(!variants.has(cls)) variants.set(cls,rec);
+        if(!variants.has(cls))variants.set(cls,rec);
       }
     }
 
     const classificationConflicts=[];
     for(const [key,variants] of conflicts.entries()){
-      if(variants.size>1){
-        classificationConflicts.push({
-          key,
-          records:[...variants.values()]
-        });
-      }
+      if(variants.size>1)
+        classificationConflicts.push({key,records:[...variants.values()]});
     }
 
     states[mode].db=db;
     states[mode].classificationConflicts=classificationConflicts;
-    bar.style.width='100%';
+    states[mode].labels=[];
 
-    let msg=`Archivo cargado correctamente. ${db.size} códigos únicos encontrados en ${result.sheetsTotal} hoja(s).`;
-    if(duplicates)msg+=` Se detectaron ${duplicates} registros repetidos por código de barras.`;
-    if(classificationConflicts.length){
-      msg+=` ALERTA: ${classificationConflicts.length} código(s) tienen más de una clasificación distinta.`;
-      const detalle=classificationConflicts.slice(0,5).map(x=>{
-        const clases=x.records.map(r=>`"${r.classification}" (hoja "${r.sheet}", fila ${r.row})`).join(' / ');
-        return `Código ${x.key}: ${clases}`;
-      }).join(' | ');
-      setStatus(mode,msg+' Revise los conflictos antes de generar rótulos. '+detalle,'warn');
-    }else{
-      setStatus(mode,msg,'ok');
-    }
-  }catch(e){setStatus(mode,'No se pudo leer el archivo: '+e.message,'error')}
-  finally{setTimeout(()=>{p.style.display='none';bar.style.width='0'},900)}
+    progress(100,'Carga completada.');
+    scene.classList.add('done');
+
+    setStatus(mode,`Archivo cargado correctamente. ${db.size.toLocaleString()} códigos disponibles.`,'ok');
+    render(mode);
+
+    setTimeout(()=>{
+      loader.style.display='none';
+      scene.classList.remove('done');
+      bar.style.width='0';
+      pct.textContent='0%';
+    },1000);
+
+  }catch(e){
+    progress(0,'No fue posible completar la carga.');
+    setStatus(mode,'No se pudo leer el archivo: '+(e&&e.message?e.message:'formato no compatible'),'error');
+  }
 }
 function search(mode){
-  const code=digits($('scan-'+mode).value),st=states[mode];
-  if(!code)return setStatus(mode,'Ingrese o escanee un código de barras.','warn');
-  if(!st.db.size)return setStatus(mode,'Primero cargue el archivo de esta pestaña.','warn');
-  const item=st.db.get(code);
-  if(!item){$('result-'+mode).innerHTML='';return setStatus(mode,'El código no fue encontrado en el archivo cargado en esta pestaña.','error')}
+  const input=$('scan-'+mode);
+  const st=states[mode];
+  const typed=String(input && input.value !== undefined ? input.value : '').trim();
+  const code=digits(typed);
 
-  const conflict=st.classificationConflicts.find(x=>x.key===code);
+  if(!code){
+    setStatus(mode,'Ingrese o escanee un código de barras.','warn');
+    if(input) input.focus();
+    return;
+  }
+
+  if(!st || !st.db || st.db.size===0){
+    setStatus(mode,'Primero cargue el archivo de esta pestaña.','warn');
+    if(input) input.focus();
+    return;
+  }
+
+  let item=null;
+
+  // Coincidencia exacta de la clave normalizada.
+  if(st.db.has(code)) item=st.db.get(code);
+
+  // Respaldo: recorre las claves por si Excel/lector las representa
+  // con un formato numérico diferente.
+  if(!item){
+    for(const [key,rec] of st.db.entries()){
+      if(digits(key)===code){
+        item=rec;
+        break;
+      }
+    }
+  }
+
+  if(!item){
+    $('result-'+mode).innerHTML='';
+    setStatus(mode,'El código no fue encontrado en el archivo cargado en esta pestaña.','error');
+    if(input) input.select();
+    return;
+  }
+
+  // Un mismo código con distintas clasificaciones queda bloqueado para
+  // selección automática; la alerta se muestra SOLO al consultar ese código.
+  const conflict=(st.classificationConflicts||[]).find(x=>digits(x.key)===code);
+
   if(conflict){
     const opciones=conflict.records.map(r=>
       `<li><b>${r.classification}</b> — hoja "${r.sheet}", fila ${r.row}</li>`
     ).join('');
+
     $('result-'+mode).innerHTML=
-      `<div class="status show warn"><b>⚠ ALERTA: el código tiene más de una clasificación</b><br>`+
-      `Código: ${item.code}<br>`+
-      `<b>Se encontraron estas clasificaciones en las celdas de clasificación de sus respectivas filas:</b>`+
-      `<ul>${opciones}</ul>`+
-      `<b>No se agregará automáticamente el rótulo hasta resolver esta diferencia.</b></div>`;
+      `<div class="status show warn"><b>⚠ ALERTA: este código tiene más de una clasificación</b><br>`+
+      `Código: ${item.code}<br><ul>${opciones}</ul>`+
+      `<b>No se agregó el rótulo automáticamente.</b></div>`;
+
+    setStatus(mode,'Código localizado. Revise la alerta de clasificación.','warn');
+    input.select();
+    input.focus();
     return;
   }
 
-  if(!st.labels.some(x=>x.key===item.key))st.labels.push(item);
-  $('result-'+mode).innerHTML=`<div class="status show ok"><b>✓ Código encontrado</b><br>Código: ${item.code}<br><b>CLASIFICACIÓN: ${item.classification}</b><br>Origen: hoja "${item.sheet}", fila ${item.row}</div>`;
-  render(mode);$('scan-'+mode).value='';$('scan-'+mode).focus();
+  // Si el código es válido y no tiene conflicto, se agrega una sola vez.
+  if(!st.labels.some(x=>x.key===item.key)){
+    st.labels.push(item);
+  }
+
+  $('result-'+mode).innerHTML=
+    `<div class="status show ok"><b>✓ Código encontrado</b><br>`+
+    `Código: ${item.code}<br>`+
+    `<b>CLASIFICACIÓN: ${item.classification}</b><br>`+
+    `Origen: hoja "${item.sheet}", fila ${item.row}</div>`;
+
+  setStatus(mode,'Código encontrado correctamente.','ok');
+  render(mode);
+
+  input.value='';
+  input.focus();
 }
 async function makeWord(mode){
-  const labels=states[mode].labels;if(!labels.length)return setStatus(mode,'No hay rótulos para generar.','warn');
+  /* PASO 4 ÚNICAMENTE.
+     El DOCX se genera y se descarga automáticamente.
+     No se muestra ningún botón adicional de descarga. */
+  const labels=[...states[mode].labels];
+  if(!labels.length){
+    return setStatus(mode,'No hay rótulos para generar.','warn');
+  }
+
+  const button=$('word-'+mode);
+  const oldText=button.textContent;
+  button.disabled=true;
+  button.textContent='⏳ Generando Word…';
+
   try{
-    const {Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,WidthType,AlignmentType,VerticalAlign,BorderStyle}=window.docx;
-    const items=[...labels];while(items.length%6)items.push(null);const rows=[];
-    for(let i=0;i<items.length;i+=6)rows.push(new TableRow({children:items.slice(i,i+6).map(item=>{
-      const border={style:BorderStyle.DASHED,size:3,color:'888888'};
-      const children=item?String(item.classification).split(/\s+/).map(t=>new Paragraph({alignment:AlignmentType.CENTER,spacing:{before:0,after:0},children:[new TextRun({text:t,bold:true,size:24,font:'Arial'})]})):[new Paragraph('')];
-      return new TableCell({width:{size:16.66,type:WidthType.PERCENTAGE},verticalAlign:VerticalAlign.CENTER,borders:{top:border,bottom:border,left:border,right:border},children});
-    })}));
-    const doc=new Document({sections:[{properties:{page:{margin:{top:500,bottom:500,left:500,right:500}}},children:[new Table({width:{size:100,type:WidthType.PERCENTAGE},rows})]}]});
-    const blob=await Packer.toBlob(doc),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`Rotulos_${mode==='nuevos'?'Nuevos':'Inventario'}_Mario_Valenzuela.docx`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500);setStatus(mode,'Documento Word generado correctamente.','ok');
-  }catch(e){setStatus(mode,'Error al generar Word: '+e.message,'error')}
+    const dx=await window.loadDocxLibrary();
+    const {
+      Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,
+      WidthType,AlignmentType,VerticalAlign,BorderStyle
+    }=dx;
+
+    const items=[...labels];
+    while(items.length%6) items.push(null);
+
+    const rows=[];
+    for(let i=0;i<items.length;i+=6){
+      const cells=items.slice(i,i+6).map(item=>{
+        const borders={
+          top:{style:BorderStyle.DASHED,size:4,color:'888888'},
+          bottom:{style:BorderStyle.DASHED,size:4,color:'888888'},
+          left:{style:BorderStyle.DASHED,size:4,color:'888888'},
+          right:{style:BorderStyle.DASHED,size:4,color:'888888'}
+        };
+
+        const paragraphs=item
+          ?String(item.classification).split(/\s+/).map(word=>
+            new Paragraph({
+              alignment:AlignmentType.CENTER,
+              spacing:{before:0,after:0,line:240},
+              children:[new TextRun({
+                text:word,
+                bold:true,
+                size:24,
+                font:'Arial'
+              })]
+            })
+          )
+          :[new Paragraph({text:''})];
+
+        return new TableCell({
+          width:{size:1440,type:WidthType.DXA},
+          verticalAlign:VerticalAlign.CENTER,
+          margins:{top:80,bottom:80,left:60,right:60},
+          borders,
+          children:paragraphs
+        });
+      });
+
+      rows.push(new TableRow({
+        height:{value:1530,rule:'atLeast'},
+        children:cells
+      }));
+    }
+
+    const doc=new Document({
+      creator:'Original de Rótulos',
+      title:`Rótulos ${mode==='nuevos'?'Nuevos':'Inventario'} — Biblioteca Mario Valenzuela`,
+      description:'Rótulos bibliográficos',
+      sections:[{
+        properties:{
+          page:{margin:{top:500,right:500,bottom:500,left:500}}
+        },
+        children:[
+          new Table({
+            width:{size:8640,type:WidthType.DXA},
+            columnWidths:[1440,1440,1440,1440,1440,1440],
+            rows
+          })
+        ]
+      }]
+    });
+
+    const blob=await Packer.toBlob(doc);
+    if(!blob || blob.size<100){
+      throw new Error('El documento Word quedó vacío.');
+    }
+
+    const url=URL.createObjectURL(blob);
+    const filename=`Rotulos_${mode==='nuevos'?'Nuevos':'Inventario'}_Mario_Valenzuela.docx`;
+
+    /* Descarga directa. No se crea ningún botón visible.
+       El enlace temporal se agrega al DOM solo para que los navegadores
+       permitan la descarga y se elimina inmediatamente después. */
+    const a=document.createElement('a');
+    a.href=url;
+    a.download=filename;
+    a.style.display='none';
+    document.body.appendChild(a);
+    a.click();
+
+    setTimeout(()=>{
+      a.remove();
+      URL.revokeObjectURL(url);
+    },5000);
+
+    setStatus(
+      mode,
+      `Documento Word generado y enviado a Descargas (${Math.round(blob.size/1024)} KB).`,
+      'ok'
+    );
+
+  }catch(e){
+    console.error('DOCX:',e);
+    setStatus(
+      mode,
+      'No fue posible generar el Word: '+(e.message||e),
+      'error'
+    );
+  }finally{
+    button.disabled=false;
+    button.textContent=oldText;
+  }
 }
 ['nuevos','inventario'].forEach(mode=>{
   $('file-'+mode).addEventListener('change',e=>load(mode,e.target.files[0]));
-  $('search-'+mode).onclick=()=>search(mode);
-  $('scan-'+mode).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();search(mode)}});
+  $('search-'+mode).onclick=(e)=>{e.preventDefault();search(mode);};
+  $('scan-'+mode).addEventListener('keydown',e=>{
+    if(e.key==='Enter'){
+      e.preventDefault();
+      e.stopPropagation();
+      search(mode);
+    }
+  });
   $('clear-'+mode).onclick=()=>{states[mode].labels=[];$('result-'+mode).innerHTML='';render(mode);setStatus(mode,'Rótulos de esta pestaña eliminados.','ok')};
   $('word-'+mode).onclick=()=>makeWord(mode);
 });

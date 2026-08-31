@@ -2,108 +2,208 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#003366">
-<meta name="description" content="Generador de rótulos para la Biblioteca de Filosofía y Teología Mario Valenzuela, S.J.">
-<title>Impresión de Rótulos Biblioteca Mario Valenzuela</title>
-<link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="styles.css">
-<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
-</head>
-
-<body>
-<header>
- <h1>Impresión de Rótulos Biblioteca Mario Valenzuela</h1>
- <p>Generación de rótulos a partir de archivos bibliográficos</p>
-</header>
-
-<main><div class="workspace">
-
-<div class="tabs" role="tablist">
- <button class="tab active" id="tab-nuevos" type="button">📂 NUEVOS</button>
- <button class="tab" id="tab-inventario" type="button">💻 INVENTARIO</button>
-</div>
-
-<!-- MÓDULO NUEVOS -->
-<section class="panel active" id="panel-nuevos">
- <div class="context-banner">CARGA DE NUEVOS</div>
-
- <div class="section">
-  <h2><span class="number">1</span>Seleccionar archivo</h2>
-  <div class="filebox">
-   <label>Archivo de Nuevos</label>
-   <input type="file" id="file-nuevos" accept=".xlsx,.xls,.csv,text/csv">
-  </div>
-  <div class="progress" id="progress-nuevos"><span></span></div>
-  <div class="status" id="status-nuevos"></div>
- </div>
-
- <div class="section">
-  <h2><span class="number">2</span>Lectura de código de barras</h2>
-  <div class="row">
-   <input id="scan-nuevos" placeholder="Escanee o escriba el código de barras" autocomplete="off">
-   <button type="button" id="search-nuevos">Buscar código</button>
-  </div>
-  <div id="result-nuevos"></div>
- </div>
-
- <div class="section">
-  <h2><span class="number">3</span>Rótulos para imprimir</h2>
-  <div class="summary">Rótulos seleccionados: <span id="count-nuevos">0</span></div>
-  <div class="labels" id="labels-nuevos"><div class="empty">Aún no hay rótulos seleccionados.</div></div>
-  <div class="actions">
-   <button type="button" class="word" id="word-nuevos">📄 Generar documento Word</button>
-   <button type="button" class="secondary" id="clear-nuevos">Limpiar rótulos</button>
-  </div>
-  <table><thead><tr><th>#</th><th>Código</th><th>Clasificación</th><th></th></tr></thead><tbody id="table-nuevos"></tbody></table>
- </div>
-</section>
-
-<!-- MÓDULO INVENTARIO -->
-<section class="panel" id="panel-inventario">
- <div class="context-banner">CARGA DE INVENTARIO</div>
-
- <div class="section">
-  <h2><span class="number">1</span>Seleccionar archivo</h2>
-  <div class="filebox">
-   <label>Archivo de Inventario</label>
-   <input type="file" id="file-inventario" accept=".xlsx,.xls,.csv,text/csv">
-  </div>
-  <div class="progress" id="progress-inventario"><span></span></div>
-  <div class="status" id="status-inventario"></div>
- </div>
-
- <div class="section">
-  <h2><span class="number">2</span>Lectura de código de barras</h2>
-  <div class="row">
-   <input id="scan-inventario" placeholder="Escanee o escriba el código de barras" autocomplete="off">
-   <button type="button" id="search-inventario">Buscar código</button>
-  </div>
-  <div id="result-inventario"></div>
- </div>
-
- <div class="section">
-  <h2><span class="number">3</span>Rótulos para imprimir</h2>
-  <div class="summary">Rótulos seleccionados: <span id="count-inventario">0</span></div>
-  <div class="labels" id="labels-inventario"><div class="empty">Aún no hay rótulos seleccionados.</div></div>
-  <div class="actions">
-   <button type="button" class="word" id="word-inventario">📄 Generar documento Word</button>
-   <button type="button" class="secondary" id="clear-inventario">Limpiar rótulos</button>
-  </div>
-  <table><thead><tr><th>#</th><th>Código</th><th>Clasificación</th><th></th></tr></thead><tbody id="table-inventario"></tbody></table>
- </div>
-</section>
-
-</div></main>
-
-
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Rótulos Biblioteca Mario Valenzuela — Original de Rótulos</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.iife.js"></script>
-<script src="app.js"></script>
+<style>
+:root{--azul:#003366;--azul2:#0B4F6C;--amarillo:#F4C400;--fondo:#F4F6F8;--texto:#263746;--borde:#D8E1E8;--verde:#287D4A;--rojo:#B63342}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#EEF2F5,#F7F9FA 380px);font-family:"Segoe UI",Arial,sans-serif;color:var(--texto)}
+header{background:linear-gradient(135deg,#003366,#073E61 60%,#0B4F6C);color:#fff;border-bottom:5px solid var(--amarillo);padding:31px 5%}
+h1{margin:0;font-size:27px}header p{margin:8px 0 0;color:#DCE8F0}
+main{max-width:1180px;margin:30px auto;padding:0 18px}.workspace{background:#fff;border:1px solid var(--borde);border-radius:18px;padding:22px;box-shadow:0 12px 35px #00336617}
+.tabs{display:flex;gap:8px;background:#EAF0F4;padding:7px;border-radius:14px;margin-bottom:26px}.tab{flex:1;border:0;background:transparent;color:#536879;padding:17px 24px;border-radius:10px;font-weight:800;font-size:16px;cursor:pointer}.tab.active{background:var(--azul);color:#fff}
+.panel{display:none}.panel.active{display:block}.banner{text-align:center;padding:18px;border-radius:12px;font-size:21px;font-weight:900;letter-spacing:1px;margin-bottom:24px;color:var(--azul);border:1px solid var(--amarillo);background:#FFF6D6}
+.section{background:#fff;border:1px solid #E0E7EC;border-radius:14px;padding:23px;margin-bottom:18px}.section h2{margin:0 0 18px;color:var(--azul);font-size:18px}.n{display:inline-grid;place-items:center;width:31px;height:31px;border-radius:50%;background:var(--amarillo);margin-right:10px}
+.filebox{border:1.5px dashed #AFC2D0;border-radius:12px;padding:26px;background:#F8FAFB}label{display:block;color:var(--azul);font-weight:750;margin-bottom:13px}
+input[type=file],input[type=text]{width:100%;padding:13px;border:1px solid #C9D7E0;border-radius:9px;font-size:15px}button{font:inherit;font-weight:750;border:0;border-radius:9px;padding:12px 19px;cursor:pointer;background:var(--azul);color:#fff}button.secondary{background:#F1F4F6;color:var(--azul);border:1px solid #D6E0E6}button.word{background:linear-gradient(135deg,#F4C400,#E6B700);color:#25323C}
+.row{display:flex;gap:10px}.row input{flex:1}.status{display:none;margin-top:14px;padding:12px 14px;border-radius:9px;border-left:4px solid var(--azul);background:#EDF3F7}.status.show{display:block}.status.ok{background:#EEF8F1;border-left-color:var(--verde)}.status.error{background:#FDF0F1;border-left-color:var(--rojo)}.status.warn{background:#FFF8E4;border-left-color:#D7A700}
+.progress{display:none;height:6px;background:#E5EBEF;margin-top:14px;overflow:hidden}.progress span{display:block;width:0;height:100%;background:linear-gradient(90deg,var(--azul2),var(--amarillo))}
+.summary{margin:3px 0 17px;font-weight:750;color:var(--azul);padding:10px 13px;background:#F4F7F9;border-left:3px solid var(--amarillo)}
+.labels{display:grid;grid-template-columns:repeat(6,1fr);gap:9px}.label{min-height:74px;border:1px dashed #9FAFBA;border-radius:5px;padding:8px;display:flex;justify-content:center;align-items:center;text-align:center;font-weight:800}.empty{grid-column:1/-1;padding:16px;color:#758592;background:#F7F9FA;border-radius:8px}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:19px}
+table{width:100%;border-collapse:collapse;margin-top:20px;font-size:13px}th,td{padding:10px;border-bottom:1px solid #E6ECEF;text-align:left}th{background:#F2F6F8;color:var(--azul)}
+@media(max-width:720px){.tabs,.row{flex-direction:column}.labels{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+<header><h1>Rótulos Biblioteca de Filosofía y Teología Mario Valenzuela, S.J.</h1><p>Generación de rótulos a partir de archivos bibliográficos</p></header>
+<main><div class="workspace">
+<div class="tabs"><button class="tab active" id="tab-nuevos">📂 NUEVOS</button><button class="tab" id="tab-inventario">💻 INVENTARIO</button></div>
+
+<section class="panel active" id="panel-nuevos">
+<div class="banner">CARGA DE NUEVOS</div>
+<div class="section"><h2><span class="n">1</span>Seleccionar archivo</h2><div class="filebox"><label>Archivo de Nuevos</label><input type="file" id="file-nuevos" accept=".xlsx,.xls,.csv"></div><div class="progress" id="progress-nuevos"><span></span></div><div class="status" id="status-nuevos"></div></div>
+<div class="section"><h2><span class="n">2</span>Lectura de código de barras</h2><div class="row"><input id="scan-nuevos" placeholder="Escanee o escriba el código de barras" autocomplete="off"><button id="search-nuevos">Buscar código</button></div><div id="result-nuevos"></div></div>
+<div class="section"><h2><span class="n">3</span>Rótulos para imprimir</h2><div class="summary">Rótulos seleccionados: <span id="count-nuevos">0</span></div><div class="labels" id="labels-nuevos"><div class="empty">Aún no hay rótulos seleccionados.</div></div><div class="actions"><button class="word" id="word-nuevos">📄 Generar documento Word</button><button class="secondary" id="clear-nuevos">Limpiar rótulos</button></div><table><thead><tr><th>#</th><th>Código</th><th>Clasificación</th><th></th></tr></thead><tbody id="table-nuevos"></tbody></table></div>
+</section>
+
+<section class="panel" id="panel-inventario">
+<div class="banner">CARGA DE INVENTARIO</div>
+<div class="section"><h2><span class="n">1</span>Seleccionar archivo</h2><div class="filebox"><label>Archivo de Inventario</label><input type="file" id="file-inventario" accept=".xlsx,.xls,.csv"></div><div class="progress" id="progress-inventario"><span></span></div><div class="status" id="status-inventario"></div></div>
+<div class="section"><h2><span class="n">2</span>Lectura de código de barras</h2><div class="row"><input id="scan-inventario" placeholder="Escanee o escriba el código de barras" autocomplete="off"><button id="search-inventario">Buscar código</button></div><div id="result-inventario"></div></div>
+<div class="section"><h2><span class="n">3</span>Rótulos para imprimir</h2><div class="summary">Rótulos seleccionados: <span id="count-inventario">0</span></div><div class="labels" id="labels-inventario"><div class="empty">Aún no hay rótulos seleccionados.</div></div><div class="actions"><button class="word" id="word-inventario">📄 Generar documento Word</button><button class="secondary" id="clear-inventario">Limpiar rótulos</button></div><table><thead><tr><th>#</th><th>Código</th><th>Clasificación</th><th></th></tr></thead><tbody id="table-inventario"></tbody></table></div>
+</section>
+</div></main>
+
 <script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('service-worker.js'));
+/* LECTOR ADAPTABLE DE EXCEL
+   - Recorre TODAS las hojas.
+   - Normaliza tildes, mayúsculas/minúsculas, espacios, guiones y separadores.
+   - Detecta encabezados por significado, no por posición.
+   - Conserva el código de barras como texto para evitar pérdida de ceros o precisión.
+   - Relaciona código y clasificación únicamente de la MISMA FILA.
+   - Cada pestaña mantiene su propio estado y base de datos.
+*/
+const normalize = v => String(v ?? '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+const digits = v => String(v ?? '').replace(/[^\d]/g,'');
+const codeWords = ['codigodebarras','codigobarra','barcode','barcodes','itembarcode','itembarcodes','codigoean','ean','isbn'];
+const classWords = ['clasificacion','clasificaicon','signatura','callnumber','classification','numero declasificacion','numero de clasificacion'];
+
+function isCodeHeader(v){
+  const x=normalize(v);
+  if(!x) return false;
+  return codeWords.some(k=>x===k || x.includes(k));
 }
+function isClassHeader(v){
+  const x=normalize(v);
+  if(!x) return false;
+  return classWords.some(k=>x===normalize(k) || x.includes(normalize(k)));
+}
+function cell(ws,r,c){
+  const z=ws[XLSX.utils.encode_cell({r,c})];
+  return z ? String(z.w ?? z.v ?? '').trim() : '';
+}
+function findHeaderPair(ws){
+  if(!ws || !ws['!ref']) return null;
+  const rg=XLSX.utils.decode_range(ws['!ref']);
+  const maxHeader=Math.min(rg.e.r,rg.s.r+250);
+  for(let r=rg.s.r;r<=maxHeader;r++){
+    let code=-1, cls=-1;
+    for(let c=rg.s.c;c<=rg.e.c;c++){
+      const v=cell(ws,r,c);
+      if(code<0 && isCodeHeader(v)) code=c;
+      if(cls<0 && isClassHeader(v)) cls=c;
+    }
+    if(code>=0 && cls>=0) return {headerRow:r,codeCol:code,classCol:cls,lastRow:rg.e.r};
+  }
+  return null;
+}
+function inferCodeColumn(ws,classCol,classRow){
+  const rg=XLSX.utils.decode_range(ws['!ref']);
+  let best=-1,bestScore=0;
+  for(let c=rg.s.c;c<=rg.e.c;c++){
+    if(c===classCol) continue;
+    let score=0;
+    for(let r=classRow+1;r<=Math.min(rg.e.r,classRow+800);r++){
+      const d=digits(cell(ws,r,c));
+      if(d.length>=8 && d.length<=18) score++;
+    }
+    if(score>bestScore){bestScore=score;best=c;}
+  }
+  return bestScore ? best : -1;
+}
+function findPairAdaptive(ws){
+  const exact=findHeaderPair(ws);
+  if(exact) return exact;
+  if(!ws || !ws['!ref']) return null;
+  const rg=XLSX.utils.decode_range(ws['!ref']);
+  const max=Math.min(rg.e.r,rg.s.r+250);
+  for(let r=rg.s.r;r<=max;r++){
+    for(let c=rg.s.c;c<=rg.e.c;c++){
+      if(isClassHeader(cell(ws,r,c))){
+        const bc=inferCodeColumn(ws,c,r);
+        if(bc>=0) return {headerRow:r,codeCol:bc,classCol:c,lastRow:rg.e.r};
+      }
+    }
+  }
+  return null;
+}
+function extract(ws,pair,sheet){
+  const out=[];
+  for(let r=pair.headerRow+1;r<=pair.lastRow;r++){
+    const rawCode=cell(ws,r,pair.codeCol);
+    const code=digits(rawCode);
+    const classification=cell(ws,r,pair.classCol);
+    if(code.length>=8 && classification){
+      out.push({key:code,code:rawCode,classification,sheet,row:r+1});
+    }
+  }
+  return out;
+}
+function processWorkbook(buffer,mode){
+  const wb=XLSX.read(buffer,{type:'array',raw:false,cellText:true,cellDates:false});
+  const records=[];
+  const sheets=wb.SheetNames;
+  for(const sheet of sheets){
+    const ws=wb.Sheets[sheet];
+    const pair=findPairAdaptive(ws);
+    if(!pair) continue;
+    records.push(...extract(ws,pair,sheet));
+  }
+  if(!records.length) throw new Error('No se encontraron registros con Código de barras y Clasificación. Revise que ambos campos existan en alguna hoja.');
+  return {records,sheets};
+}
+
+const states={nuevos:{db:new Map(),labels:[]},inventario:{db:new Map(),labels:[]}};
+const $=id=>document.getElementById(id);
+function setStatus(mode,msg,type=''){const e=$('status-'+mode);e.textContent=msg;e.className='status show '+type;}
+function render(mode){
+  const st=states[mode]; $('count-'+mode).textContent=st.labels.length;
+  $('labels-'+mode).innerHTML=st.labels.length?st.labels.map(x=>'<div class="label">'+String(x.classification).replace(/\s+/g,'<br>')+'</div>').join(''):'<div class="empty">Aún no hay rótulos seleccionados.</div>';
+  $('table-'+mode).innerHTML=st.labels.map((x,i)=>`<tr><td>${i+1}</td><td>${x.code}</td><td>${x.classification}</td><td><button class="secondary" data-i="${i}">Eliminar</button></td></tr>`).join('');
+  $('table-'+mode).querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{st.labels.splice(+b.dataset.i,1);render(mode)});
+}
+async function load(mode,file){
+  if(!file)return;
+  const p=$('progress-'+mode),bar=p.querySelector('span');p.style.display='block';bar.style.width='10%';
+  setStatus(mode,'Analizando todas las hojas del Excel…');
+  try{
+    const buffer=await file.arrayBuffer();bar.style.width='40%';
+    const result=processWorkbook(buffer,mode);bar.style.width='80%';
+    const db=new Map();
+    for(const rec of result.records){
+      if(!db.has(rec.key)) db.set(rec.key,rec);
+    }
+    states[mode].db=db;bar.style.width='100%';
+    const dup=result.records.length-db.size;
+    setStatus(mode,`Archivo cargado. ${db.size} códigos únicos encontrados en ${result.sheets.length} hoja(s).${dup?` Se detectaron ${dup} registros repetidos y se conservó la primera coincidencia.`:''}`,'ok');
+  }catch(e){setStatus(mode,e.message,'error')}
+  finally{setTimeout(()=>{p.style.display='none';bar.style.width='0'},700)}
+}
+function search(mode){
+  const code=digits($( 'scan-'+mode).value),st=states[mode];
+  if(!code)return setStatus(mode,'Ingrese o escanee un código de barras.','warn');
+  if(!st.db.size)return setStatus(mode,'Primero cargue el archivo de esta pestaña.','warn');
+  const item=st.db.get(code);
+  if(!item){$('result-'+mode).innerHTML='';return setStatus(mode,'El código no fue encontrado en el archivo cargado en esta pestaña.','error')}
+  if(!st.labels.some(x=>x.code===item.code&&x.classification===item.classification))st.labels.push(item);
+  $('result-'+mode).innerHTML=`<div class="status show ok"><b>✓ Código encontrado</b><br>Código: ${item.code}<br><b>CLASIFICACIÓN: ${item.classification}</b><br>Hoja: ${item.sheet} · fila: ${item.row}</div>`;
+  render(mode);$('scan-'+mode).value='';$('scan-'+mode).focus();
+}
+async function makeWord(mode){
+  const labels=states[mode].labels;if(!labels.length)return setStatus(mode,'No hay rótulos para generar.','warn');
+  try{
+    const {Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,WidthType,AlignmentType,VerticalAlign,BorderStyle}=window.docx;
+    const items=[...labels];while(items.length%6)items.push(null);const rows=[];
+    for(let i=0;i<items.length;i+=6)rows.push(new TableRow({children:items.slice(i,i+6).map(item=>{
+      const border={style:BorderStyle.DASHED,size:3,color:'888888'};
+      const children=item?String(item.classification).split(/\s+/).map(t=>new Paragraph({alignment:AlignmentType.CENTER,spacing:{before:0,after:0},children:[new TextRun({text:t,bold:true,size:24,font:'Arial'})]})):[new Paragraph('')];
+      return new TableCell({width:{size:16.66,type:WidthType.PERCENTAGE},verticalAlign:VerticalAlign.CENTER,borders:{top:border,bottom:border,left:border,right:border},children});
+    })}));
+    const doc=new Document({sections:[{properties:{page:{margin:{top:500,bottom:500,left:500,right:500}}},children:[new Table({width:{size:100,type:WidthType.PERCENTAGE},rows})]}]});
+    const blob=await Packer.toBlob(doc),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`Rotulos_${mode==='nuevos'?'Nuevos':'Inventario'}_Mario_Valenzuela.docx`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+    setStatus(mode,'Documento Word generado correctamente.','ok');
+  }catch(e){setStatus(mode,'Error al generar Word: '+e.message,'error')}
+}
+['nuevos','inventario'].forEach(mode=>{
+  $('file-'+mode).addEventListener('change',e=>load(mode,e.target.files[0]));
+  $('search-'+mode).onclick=()=>search(mode);
+  $('scan-'+mode).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();search(mode)}});
+  $('clear-'+mode).onclick=()=>{states[mode].labels=[];$('result-'+mode).innerHTML='';render(mode);setStatus(mode,'Rótulos de esta pestaña eliminados.','ok')};
+  $('word-'+mode).onclick=()=>makeWord(mode);
+});
+function activate(mode){['nuevos','inventario'].forEach(m=>{$('tab-'+m).classList.toggle('active',m===mode);$('panel-'+m).classList.toggle('active',m===mode)})}
+$('tab-nuevos').onclick=()=>activate('nuevos');$('tab-inventario').onclick=()=>activate('inventario');
+render('nuevos');render('inventario');
 </script>
-</body>
-</html>
+</body></html>

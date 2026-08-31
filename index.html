@@ -46,138 +46,177 @@ table{width:100%;border-collapse:collapse;margin-top:20px;font-size:13px}th,td{p
 </div></main>
 
 <script>
-/* LECTOR ADAPTABLE DE EXCEL
-   - Recorre TODAS las hojas.
-   - Normaliza tildes, mayúsculas/minúsculas, espacios, guiones y separadores.
-   - Detecta encabezados por significado, no por posición.
-   - Conserva el código de barras como texto para evitar pérdida de ceros o precisión.
-   - Relaciona código y clasificación únicamente de la MISMA FILA.
-   - Cada pestaña mantiene su propio estado y base de datos.
-*/
 const normalize = v => String(v ?? '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
-const digits = v => String(v ?? '').replace(/[^\d]/g,'');
-const codeWords = ['codigodebarras','codigobarra','barcode','barcodes','itembarcode','itembarcodes','codigoean','ean','isbn'];
-const classWords = ['clasificacion','clasificaicon','signatura','callnumber','classification','numero declasificacion','numero de clasificacion'];
+function digits(v){
+  let s=String(v ?? '').trim().replace(/\u00A0/g,' ');
+  if(!s) return '';
+  if(/[eE][+\-]?\d+$/.test(s)){
+    const n=Number(s.replace(/,/g,'.'));
+    if(Number.isFinite(n)) s=String(Math.trunc(n));
+  }
+  return s.replace(/[^\d]/g,'');
+}
+const codePatterns=['codigodebarras','codigobarras','codigodebarra','codigobarra','barcode','barcodes','itembarcode','itembarcodes','codigoean','ean','isbn'];
+const classPatterns=['clasificacion','clasificaicon','clasificacio','clasif','signatura','signaturatopografica','callnumber','classification','numerodeclasificacion'].map(normalize);
+function isCodeHeader(v){const x=normalize(v);return !!x&&codePatterns.some(k=>x===k||x.includes(k))}
+function isClassHeader(v){const x=normalize(v);return !!x&&classPatterns.some(k=>x===k||x.includes(k))}
+function cellObj(ws,r,c){return ws[XLSX.utils.encode_cell({r,c})]||null}
+function cell(ws,r,c){const z=cellObj(ws,r,c);return z?String(z.w??z.v??'').trim():''}
 
-function isCodeHeader(v){
-  const x=normalize(v);
-  if(!x) return false;
-  return codeWords.some(k=>x===k || x.includes(k));
-}
-function isClassHeader(v){
-  const x=normalize(v);
-  if(!x) return false;
-  return classWords.some(k=>x===normalize(k) || x.includes(normalize(k)));
-}
-function cell(ws,r,c){
-  const z=ws[XLSX.utils.encode_cell({r,c})];
-  return z ? String(z.w ?? z.v ?? '').trim() : '';
-}
-function findHeaderPair(ws){
-  if(!ws || !ws['!ref']) return null;
-  const rg=XLSX.utils.decode_range(ws['!ref']);
-  const maxHeader=Math.min(rg.e.r,rg.s.r+250);
+function findPairAdaptive(ws){
+  if(!ws||!ws['!ref'])return null;
+  const rg=XLSX.utils.decode_range(ws['!ref']),maxHeader=Math.min(rg.e.r,rg.s.r+400);
   for(let r=rg.s.r;r<=maxHeader;r++){
-    let code=-1, cls=-1;
+    let bc=-1,cc=-1;
     for(let c=rg.s.c;c<=rg.e.c;c++){
       const v=cell(ws,r,c);
-      if(code<0 && isCodeHeader(v)) code=c;
-      if(cls<0 && isClassHeader(v)) cls=c;
+      if(bc<0&&isCodeHeader(v))bc=c;
+      if(cc<0&&isClassHeader(v))cc=c;
     }
-    if(code>=0 && cls>=0) return {headerRow:r,codeCol:code,classCol:cls,lastRow:rg.e.r};
+    if(bc>=0&&cc>=0)return{headerRow:Math.min(r,rg.e.r),codeCol:bc,classCol:cc,lastRow:rg.e.r};
   }
-  return null;
+  let b=[],c=[];
+  for(let r=rg.s.r;r<=maxHeader;r++)for(let col=rg.s.c;col<=rg.e.c;col++){
+    const v=cell(ws,r,col);
+    if(isCodeHeader(v))b.push({r,c:col});
+    if(isClassHeader(v))c.push({r,c:col});
+  }
+  if(!b.length||!c.length)return null;
+  let best=null,score=-Infinity;
+  for(const x of b)for(const y of c){
+    const s=Math.max(0,100-Math.abs(x.r-y.r)*15-Math.abs(x.c-y.c)*3);
+    if(s>score){score=s;best={headerRow:Math.max(x.r,y.r),codeCol:x.c,classCol:y.c,lastRow:rg.e.r}}
+  }
+  return best;
 }
 function inferCodeColumn(ws,classCol,classRow){
-  const rg=XLSX.utils.decode_range(ws['!ref']);
-  let best=-1,bestScore=0;
-  for(let c=rg.s.c;c<=rg.e.c;c++){
-    if(c===classCol) continue;
-    let score=0;
-    for(let r=classRow+1;r<=Math.min(rg.e.r,classRow+800);r++){
-      const d=digits(cell(ws,r,c));
-      if(d.length>=8 && d.length<=18) score++;
-    }
-    if(score>bestScore){bestScore=score;best=c;}
+  const rg=XLSX.utils.decode_range(ws['!ref']);let best=-1,bestScore=0;
+  for(let c=rg.s.c;c<=rg.e.c;c++){if(c===classCol)continue;let score=0;
+    for(let r=classRow+1;r<=Math.min(rg.e.r,classRow+1500);r++){const d=digits(cell(ws,r,c));if(d.length>=8&&d.length<=20)score++}
+    if(score>bestScore){bestScore=score;best=c}
   }
-  return bestScore ? best : -1;
+  return best;
 }
-function findPairAdaptive(ws){
-  const exact=findHeaderPair(ws);
-  if(exact) return exact;
-  if(!ws || !ws['!ref']) return null;
-  const rg=XLSX.utils.decode_range(ws['!ref']);
-  const max=Math.min(rg.e.r,rg.s.r+250);
-  for(let r=rg.s.r;r<=max;r++){
-    for(let c=rg.s.c;c<=rg.e.c;c++){
-      if(isClassHeader(cell(ws,r,c))){
-        const bc=inferCodeColumn(ws,c,r);
-        if(bc>=0) return {headerRow:r,codeCol:bc,classCol:c,lastRow:rg.e.r};
-      }
-    }
+function findPairWithInference(ws){
+  const p=findPairAdaptive(ws);if(p)return p;
+  if(!ws||!ws['!ref'])return null;
+  const rg=XLSX.utils.decode_range(ws['!ref']),max=Math.min(rg.e.r,rg.s.r+400);
+  for(let r=rg.s.r;r<=max;r++)for(let c=rg.s.c;c<=rg.e.c;c++)if(isClassHeader(cell(ws,r,c))){
+    const bc=inferCodeColumn(ws,c,r);
+    if(bc>=0)return{headerRow:r,codeCol:bc,classCol:c,lastRow:rg.e.r};
   }
   return null;
 }
 function extract(ws,pair,sheet){
   const out=[];
   for(let r=pair.headerRow+1;r<=pair.lastRow;r++){
-    const rawCode=cell(ws,r,pair.codeCol);
-    const code=digits(rawCode);
-    const classification=cell(ws,r,pair.classCol);
-    if(code.length>=8 && classification){
-      out.push({key:code,code:rawCode,classification,sheet,row:r+1});
-    }
+    const rawCode=cell(ws,r,pair.codeCol),code=digits(rawCode),classification=cell(ws,r,pair.classCol).trim();
+    if(code.length>=8&&code.length<=20&&classification)out.push({key:code,code:rawCode,classification,sheet,row:r+1});
   }
   return out;
 }
-function processWorkbook(buffer,mode){
+function processWorkbook(buffer){
   const wb=XLSX.read(buffer,{type:'array',raw:false,cellText:true,cellDates:false});
-  const records=[];
-  const sheets=wb.SheetNames;
-  for(const sheet of sheets){
-    const ws=wb.Sheets[sheet];
-    const pair=findPairAdaptive(ws);
-    if(!pair) continue;
-    records.push(...extract(ws,pair,sheet));
+  const records=[],matchedSheets=[];
+  for(const sheet of wb.SheetNames){
+    const pair=findPairWithInference(wb.Sheets[sheet]);
+    if(!pair)continue;
+    const rows=extract(wb.Sheets[sheet],pair,sheet);
+    if(rows.length){matchedSheets.push(sheet);records.push(...rows)}
   }
-  if(!records.length) throw new Error('No se encontraron registros con Código de barras y Clasificación. Revise que ambos campos existan en alguna hoja.');
-  return {records,sheets};
+  if(!records.length)throw new Error('El Excel se abrió, pero no se encontraron filas con Código de barras y Clasificación. La aplicación busca ambos campos en todas las hojas y toma los datos de la misma fila.');
+  return{records,sheetsTotal:wb.SheetNames.length,matchedSheets};
 }
 
-const states={nuevos:{db:new Map(),labels:[]},inventario:{db:new Map(),labels:[]}};
+const states={
+  nuevos:{db:new Map(),labels:[],classificationConflicts:[]},
+  inventario:{db:new Map(),labels:[],classificationConflicts:[]}
+};
 const $=id=>document.getElementById(id);
-function setStatus(mode,msg,type=''){const e=$('status-'+mode);e.textContent=msg;e.className='status show '+type;}
+function setStatus(mode,msg,type=''){const e=$('status-'+mode);e.textContent=msg;e.className='status show '+type}
 function render(mode){
-  const st=states[mode]; $('count-'+mode).textContent=st.labels.length;
+  const st=states[mode];$('count-'+mode).textContent=st.labels.length;
   $('labels-'+mode).innerHTML=st.labels.length?st.labels.map(x=>'<div class="label">'+String(x.classification).replace(/\s+/g,'<br>')+'</div>').join(''):'<div class="empty">Aún no hay rótulos seleccionados.</div>';
   $('table-'+mode).innerHTML=st.labels.map((x,i)=>`<tr><td>${i+1}</td><td>${x.code}</td><td>${x.classification}</td><td><button class="secondary" data-i="${i}">Eliminar</button></td></tr>`).join('');
   $('table-'+mode).querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{st.labels.splice(+b.dataset.i,1);render(mode)});
 }
 async function load(mode,file){
   if(!file)return;
-  const p=$('progress-'+mode),bar=p.querySelector('span');p.style.display='block';bar.style.width='10%';
-  setStatus(mode,'Analizando todas las hojas del Excel…');
+  const p=$('progress-'+mode),bar=p.querySelector('span');p.style.display='block';bar.style.width='10%';setStatus(mode,'Abriendo y analizando todas las hojas del Excel…');
   try{
-    const buffer=await file.arrayBuffer();bar.style.width='40%';
-    const result=processWorkbook(buffer,mode);bar.style.width='80%';
+    const buffer=await file.arrayBuffer();bar.style.width='45%';const result=processWorkbook(buffer);bar.style.width='80%';
     const db=new Map();
+    const conflicts=new Map();
+    let duplicates=0;
+
+    /* Un mismo código puede aparecer varias veces. Solo es un conflicto
+       cuando el mismo código tiene DOS O MÁS clasificaciones DISTINTAS.
+       La clasificación se toma exclusivamente de la celda de clasificación
+       de la misma fila del código. */
     for(const rec of result.records){
-      if(!db.has(rec.key)) db.set(rec.key,rec);
+      if(!db.has(rec.key)){
+        db.set(rec.key,rec);
+        conflicts.set(rec.key,new Map([[String(rec.classification).trim(),rec]]));
+      }else{
+        duplicates++;
+        const variants=conflicts.get(rec.key);
+        const cls=String(rec.classification).trim();
+        if(!variants.has(cls)) variants.set(cls,rec);
+      }
     }
-    states[mode].db=db;bar.style.width='100%';
-    const dup=result.records.length-db.size;
-    setStatus(mode,`Archivo cargado. ${db.size} códigos únicos encontrados en ${result.sheets.length} hoja(s).${dup?` Se detectaron ${dup} registros repetidos y se conservó la primera coincidencia.`:''}`,'ok');
-  }catch(e){setStatus(mode,e.message,'error')}
-  finally{setTimeout(()=>{p.style.display='none';bar.style.width='0'},700)}
+
+    const classificationConflicts=[];
+    for(const [key,variants] of conflicts.entries()){
+      if(variants.size>1){
+        classificationConflicts.push({
+          key,
+          records:[...variants.values()]
+        });
+      }
+    }
+
+    states[mode].db=db;
+    states[mode].classificationConflicts=classificationConflicts;
+    bar.style.width='100%';
+
+    let msg=`Archivo cargado correctamente. ${db.size} códigos únicos encontrados en ${result.sheetsTotal} hoja(s).`;
+    if(duplicates)msg+=` Se detectaron ${duplicates} registros repetidos por código de barras.`;
+    if(classificationConflicts.length){
+      msg+=` ALERTA: ${classificationConflicts.length} código(s) tienen más de una clasificación distinta.`;
+      const detalle=classificationConflicts.slice(0,5).map(x=>{
+        const clases=x.records.map(r=>`"${r.classification}" (hoja "${r.sheet}", fila ${r.row})`).join(' / ');
+        return `Código ${x.key}: ${clases}`;
+      }).join(' | ');
+      setStatus(mode,msg+' Revise los conflictos antes de generar rótulos. '+detalle,'warn');
+    }else{
+      setStatus(mode,msg,'ok');
+    }
+  }catch(e){setStatus(mode,'No se pudo leer el archivo: '+e.message,'error')}
+  finally{setTimeout(()=>{p.style.display='none';bar.style.width='0'},900)}
 }
 function search(mode){
-  const code=digits($( 'scan-'+mode).value),st=states[mode];
+  const code=digits($('scan-'+mode).value),st=states[mode];
   if(!code)return setStatus(mode,'Ingrese o escanee un código de barras.','warn');
   if(!st.db.size)return setStatus(mode,'Primero cargue el archivo de esta pestaña.','warn');
   const item=st.db.get(code);
   if(!item){$('result-'+mode).innerHTML='';return setStatus(mode,'El código no fue encontrado en el archivo cargado en esta pestaña.','error')}
-  if(!st.labels.some(x=>x.code===item.code&&x.classification===item.classification))st.labels.push(item);
-  $('result-'+mode).innerHTML=`<div class="status show ok"><b>✓ Código encontrado</b><br>Código: ${item.code}<br><b>CLASIFICACIÓN: ${item.classification}</b><br>Hoja: ${item.sheet} · fila: ${item.row}</div>`;
+
+  const conflict=st.classificationConflicts.find(x=>x.key===code);
+  if(conflict){
+    const opciones=conflict.records.map(r=>
+      `<li><b>${r.classification}</b> — hoja "${r.sheet}", fila ${r.row}</li>`
+    ).join('');
+    $('result-'+mode).innerHTML=
+      `<div class="status show warn"><b>⚠ ALERTA: el código tiene más de una clasificación</b><br>`+
+      `Código: ${item.code}<br>`+
+      `<b>Se encontraron estas clasificaciones en las celdas de clasificación de sus respectivas filas:</b>`+
+      `<ul>${opciones}</ul>`+
+      `<b>No se agregará automáticamente el rótulo hasta resolver esta diferencia.</b></div>`;
+    return;
+  }
+
+  if(!st.labels.some(x=>x.key===item.key))st.labels.push(item);
+  $('result-'+mode).innerHTML=`<div class="status show ok"><b>✓ Código encontrado</b><br>Código: ${item.code}<br><b>CLASIFICACIÓN: ${item.classification}</b><br>Origen: hoja "${item.sheet}", fila ${item.row}</div>`;
   render(mode);$('scan-'+mode).value='';$('scan-'+mode).focus();
 }
 async function makeWord(mode){
@@ -191,8 +230,7 @@ async function makeWord(mode){
       return new TableCell({width:{size:16.66,type:WidthType.PERCENTAGE},verticalAlign:VerticalAlign.CENTER,borders:{top:border,bottom:border,left:border,right:border},children});
     })}));
     const doc=new Document({sections:[{properties:{page:{margin:{top:500,bottom:500,left:500,right:500}}},children:[new Table({width:{size:100,type:WidthType.PERCENTAGE},rows})]}]});
-    const blob=await Packer.toBlob(doc),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`Rotulos_${mode==='nuevos'?'Nuevos':'Inventario'}_Mario_Valenzuela.docx`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500);
-    setStatus(mode,'Documento Word generado correctamente.','ok');
+    const blob=await Packer.toBlob(doc),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`Rotulos_${mode==='nuevos'?'Nuevos':'Inventario'}_Mario_Valenzuela.docx`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500);setStatus(mode,'Documento Word generado correctamente.','ok');
   }catch(e){setStatus(mode,'Error al generar Word: '+e.message,'error')}
 }
 ['nuevos','inventario'].forEach(mode=>{
@@ -203,7 +241,7 @@ async function makeWord(mode){
   $('word-'+mode).onclick=()=>makeWord(mode);
 });
 function activate(mode){['nuevos','inventario'].forEach(m=>{$('tab-'+m).classList.toggle('active',m===mode);$('panel-'+m).classList.toggle('active',m===mode)})}
-$('tab-nuevos').onclick=()=>activate('nuevos');$('tab-inventario').onclick=()=>activate('inventario');
-render('nuevos');render('inventario');
+$('tab-nuevos').onclick=()=>activate('nuevos');$('tab-inventario').onclick=()=>activate('inventario');render('nuevos');render('inventario');
+
 </script>
 </body></html>
